@@ -67,7 +67,7 @@ class RadialGP:
 
     def predict(self, angles) -> tuple[np.ndarray, np.ndarray]:
         mean, std = self._gp.predict(circle_inputs(angles), return_std=True)
-        return mean + self.config.mean, std
+        return np.atleast_1d(mean) + self.config.mean, np.atleast_1d(std)
 
     def posterior_covariance(self, angles) -> np.ndarray:
         _, covariance = self._gp.predict(circle_inputs(angles), return_cov=True)

@@ -59,6 +59,8 @@ def test_variance_reduction_matches_refit(noise, candidate):
 
 def test_prior_and_duplicate_noiseless_contacts():
     model = RadialGP()
+    assert model.predict([0])[0].shape == (1,)
+    assert model.predict([0])[1].shape == (1,)
     mean, std = model.predict([0, 1])
     np.testing.assert_allclose(mean, 0.525)
     np.testing.assert_allclose(std, 0.2)
