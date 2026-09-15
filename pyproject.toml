@@ -1,0 +1,32 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "touch-explorer"
+version = "0.1.0"
+description = "Contact-based shape reconstruction and active probing in 2D"
+requires-python = ">=3.12"
+dependencies = [
+  "numpy>=2.0",
+  "scipy>=1.13",
+  "scikit-learn>=1.5",
+  "matplotlib>=3.9",
+  "threadpoolctl>=3.5",
+]
+
+[project.scripts]
+touch-explorer = "touch_explorer.cli:main"
+
+[dependency-groups]
+dev = ["pytest>=8.3", "ruff>=0.9"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
