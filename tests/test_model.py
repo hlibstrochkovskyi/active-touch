@@ -75,3 +75,14 @@ def test_invalid_model_settings_and_queries():
         ModelConfig(length_scale=0)
     with pytest.raises(ValueError):
         RadialGP().predict([float("nan")])
+
+
+def test_optional_hyperparameter_fit_stays_within_declared_bounds():
+    config = ModelConfig(learn_hyperparameters=True)
+    model = RadialGP(config)
+    model.fit(observations((0.35, 0.72, 0.42), noise=0.01), optimize=True)
+    signal = float(np.sqrt(model._gp.kernel_.k1.constant_value))
+    length = float(model._gp.kernel_.k2.length_scale)
+    assert config.signal_bounds[0] <= signal <= config.signal_bounds[1]
+    assert config.length_bounds[0] <= length <= config.length_bounds[1]
+    assert np.isfinite(model.predict(np.linspace(0, 2 * np.pi, 20))[0]).all()

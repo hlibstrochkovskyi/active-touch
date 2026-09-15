@@ -15,12 +15,22 @@ class ModelConfig:
     signal_std: float = 0.2
     length_scale: float = 0.4
     jitter: float = 1e-10
+    learn_hyperparameters: bool = False
+    signal_bounds: tuple[float, float] = (0.05, 0.4)
+    length_bounds: tuple[float, float] = (0.08, 1.2)
 
     def __post_init__(self):
         for name in ("mean", "signal_std", "length_scale", "jitter"):
             finite(getattr(self, name), name, strict=True)
         if self.jitter > 1e-7:
             raise ValueError("jitter must stay <= 1e-7; model sensor noise separately")
+        if (
+            len(self.signal_bounds) != 2
+            or len(self.length_bounds) != 2
+            or not 0 < self.signal_bounds[0] < self.signal_bounds[1]
+            or not 0 < self.length_bounds[0] < self.length_bounds[1]
+        ):
+            raise ValueError("hyperparameter bounds must be increasing positive pairs")
 
 
 def circle_inputs(angles):
@@ -36,15 +46,25 @@ class RadialGP:
         self.last_jitter = self.config.jitter
         self._gp = self._new_gp(self.last_jitter)
 
-    def _new_gp(self, alpha):
-        kernel = ConstantKernel(self.config.signal_std**2) * Matern(
-            length_scale=self.config.length_scale, nu=1.5
+    def _new_gp(self, alpha, *, optimize=False):
+        kernel = ConstantKernel(
+            self.config.signal_std**2,
+            constant_value_bounds=tuple(v**2 for v in self.config.signal_bounds)
+            if optimize
+            else "fixed",
+        ) * Matern(
+            length_scale=self.config.length_scale,
+            length_scale_bounds=self.config.length_bounds if optimize else "fixed",
+            nu=1.5,
         )
         return GaussianProcessRegressor(
-            kernel=kernel, alpha=alpha, optimizer=None, normalize_y=False
+            kernel=kernel,
+            alpha=alpha,
+            optimizer="fmin_l_bfgs_b" if optimize else None,
+            normalize_y=False,
         )
 
-    def fit(self, observations: tuple[ContactObservation, ...]) -> None:
+    def fit(self, observations: tuple[ContactObservation, ...], *, optimize: bool = False) -> None:
         if not observations:
             self.last_jitter = self.config.jitter
             self._gp = self._new_gp(self.last_jitter)
@@ -54,7 +74,7 @@ class RadialGP:
         noise = np.array([o.noise_variance for o in observations])
         jitter = self.config.jitter
         while True:
-            gp = self._new_gp(noise + jitter)
+            gp = self._new_gp(noise + jitter, optimize=optimize)
             try:
                 gp.fit(x, y)
             except np.linalg.LinAlgError:

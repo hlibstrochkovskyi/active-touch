@@ -113,7 +113,14 @@ def _run_episode(config: Config) -> Episode:
         visited.append(decision.action.candidate_index)
         current_angle = observation.theta
         start = perf_counter()
-        model.fit(tuple(observations))
+        model.fit(
+            tuple(observations),
+            optimize=(
+                config.model.learn_hyperparameters
+                and len(observations) >= 16
+                and len(observations) % 8 == 0
+            ),
+        )
         fit_seconds = perf_counter() - start
         # Exact motion data are used only below, after the agent decision/update.
         total_time += event.duration
