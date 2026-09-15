@@ -1,0 +1,22 @@
+[experiment]
+policy = "cost"
+touches = 32
+initial = 8
+candidates = 128
+integration_points = 128
+evaluation_points = 1024
+noise_std = 0.005
+seed = 7
+
+[shape]
+kind = "recess"
+base = 0.6
+depth = 0.18
+width = 0.08
+phase = 0.7
+
+[model]
+mean = 0.525
+signal_std = 0.2
+length_scale = 0.4
+jitter = 1e-10

@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Touch Explorer</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f6f7f8; color: #202830; font: 15px system-ui, sans-serif; }
+  main { max-width: 1200px; margin: 36px auto; padding: 0 24px; }
+  h1 { font-size: 26px; margin-bottom: 6px; }
+  .muted { color: #606975; }
+  .controls { display: flex; align-items: center; flex-wrap: wrap; gap: 16px; margin: 24px 0; }
+  button, select { font: inherit; padding: 7px 14px; border: 1px solid #bac4cf; border-radius: 5px; background: white; }
+  button { cursor: pointer; }
+  input[type=range] { flex: 1; min-width: 180px; accent-color: #2463a7; }
+  .plots { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  section { background: white; border: 1px solid #dce1e7; border-radius: 8px; padding: 16px; }
+  h2 { font-size: 16px; margin: 0 0 10px; font-weight: 600; }
+  canvas { width: 100%; aspect-ratio: 1.2; display: block; }
+  #stats { display: flex; gap: 28px; flex-wrap: wrap; padding: 20px 0; font-variant-numeric: tabular-nums; }
+  .legend { display: flex; gap: 20px; flex-wrap: wrap; font-size: 13px; margin-top: 12px; }
+  .blue { color: #2463a7; } .orange { color: #c65c22; }
+  @media (max-width: 700px) { .plots { grid-template-columns: 1fr; } main { margin-top: 20px; } }
+</style>
+<main>
+  <h1>Touch Explorer</h1>
+  <div id="subtitle" class="muted"></div>
+  <div class="controls">
+    <button id="play">Play</button>
+    <button id="restart">Restart</button>
+    <input id="timeline" type="range" min="0" max="1000" value="0" aria-label="Replay time">
+    <select id="speed" aria-label="Playback speed"><option value="1">1×</option><option value="4" selected>4×</option><option value="10">10×</option></select>
+    <label><input id="reveal" type="checkbox" checked> Show true outline</label>
+  </div>
+  <div class="plots">
+    <section><h2>Probe and reconstruction</h2><canvas id="world" aria-label="Probe path and estimated outline"></canvas></section>
+    <section><h2>Radius versus angle</h2><canvas id="radial" aria-label="Estimated radius and uncertainty"></canvas></section>
+  </div>
+  <div class="legend"><span class="blue">Blue: GP estimate and 95% interval</span><span class="orange">Orange: measured contacts</span><span class="muted">Gray: truth, available only to the viewer</span></div>
+  <div id="stats"></div>
+  <p class="muted">Intervals are pointwise model estimates, not a guarantee that every feature was found. Estimates update after completed probe cycles. Lengths are normalized to the default outer radius.</p>
+</main>
+<script>
+const data = __RUN_DATA__;
+const $ = id => document.getElementById(id);
+const tau = 2 * Math.PI, motion = data.config.motion;
+const arc = (a, b) => ((b-a+Math.PI)%tau+tau)%tau-Math.PI;
+const ends = [0], durations = data.events.map(e => {
+  const d = motion.outer_radius-e.true_radius;
+  const parts = [motion.outer_radius*Math.abs(arc(e.start_angle,e.theta))/motion.transit_speed,
+                 d/motion.inward_speed, motion.dwell, d/motion.outward_speed];
+  ends.push(ends.at(-1)+parts.reduce((a,b)=>a+b,0));
+  return parts;
+});
+const total = ends.at(-1);
+let time = 0, playing = false, previous = null;
+$('subtitle').textContent = `${data.config.shape.kind} · ${data.config.experiment.policy} policy · noise σ = ${data.config.experiment.noise_std} · seed ${data.config.experiment.seed}`;
+function context(id) {
+  const canvas=$(id), rect=canvas.getBoundingClientRect(), ratio=window.devicePixelRatio||1;
+  if(canvas.width!==Math.round(rect.width*ratio)||canvas.height!==Math.round(rect.height*ratio)){
+    canvas.width=Math.round(rect.width*ratio); canvas.height=Math.round(rect.height*ratio);
+  }
+  const c=canvas.getContext('2d'); c.setTransform(ratio,0,0,ratio,0,0);
+  c.clearRect(0,0,rect.width,rect.height); c.font='12px system-ui';
+  return [c,rect.width,rect.height];
+}
+function line(c, points, color, width=1.6, close=false) {
+  c.beginPath(); points.forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));
+  if(close)c.closePath(); c.strokeStyle=color; c.lineWidth=width; c.stroke();
+}
+function band(c, upper, lower) {
+  c.beginPath(); [...upper,...lower.slice().reverse()].forEach((p,i)=>i?c.lineTo(...p):c.moveTo(...p));
+  c.closePath(); c.fillStyle='#2463a726'; c.fill();
+}
+function dot(c,p,color,size=3){c.beginPath();c.arc(...p,size,0,tau);c.fillStyle=color;c.fill();}
+function draw(){
+  let n=0; while(n<data.events.length&&ends[n+1]<=time+1e-9)n++;
+  const mean=data.means[n], std=data.stds[n], theta=data.angles;
+  const upper=mean.map((v,i)=>v+1.96*std[i]), lower=mean.map((v,i)=>v-1.96*std[i]);
+  const [c,w,h]=context('world'), scale=Math.min(w,h)/(2.3*motion.outer_radius);
+  const xy=(x,y)=>[w/2+x*scale,h/2-y*scale];
+  const polar=(r,t)=>xy(r*Math.cos(t),r*Math.sin(t));
+  line(c,[xy(-motion.outer_radius,0),xy(motion.outer_radius,0)],'#e4e8ed',1);
+  line(c,[xy(0,-motion.outer_radius),xy(0,motion.outer_radius)],'#e4e8ed',1);
+  c.beginPath();c.arc(w/2,h/2,motion.outer_radius*scale,0,tau);c.strokeStyle='#cdd4dc';c.lineWidth=1;c.stroke();
+  band(c,upper.map((v,i)=>polar(Math.max(0,v),theta[i])),lower.map((v,i)=>polar(Math.max(0,v),theta[i])));
+  if($('reveal').checked)line(c,data.truth.map((v,i)=>polar(v,theta[i])),'#747e89',1.5,true);
+  line(c,mean.map((v,i)=>polar(v,theta[i])),'#2463a7',2,true);
+  data.observations.slice(0,n).forEach(o=>dot(c,polar(o.measured_radius,o.theta),'#c65c22',2.7));
+  let status='Finished', probe;
+  if(n<data.events.length){
+    const e=data.events[n], t=time-ends[n], [a,b,d]=durations[n];
+    let angle=e.theta, radius=motion.outer_radius;
+    if(t<a){angle=e.start_angle+arc(e.start_angle,e.theta)*t/a;status='Moving around object';}
+    else if(t<a+b){radius-=motion.inward_speed*(t-a);status='Approaching';}
+    else if(t<a+b+d){radius=e.true_radius;status='Contact';}
+    else{radius=Math.min(motion.outer_radius,e.true_radius+motion.outward_speed*(t-a-b-d));status='Retracting';}
+    line(c,[polar(motion.outer_radius,e.theta),polar(0,e.theta)],'#dbe3ed',1);
+    probe=polar(radius,angle);
+  }else probe=polar(motion.outer_radius,data.events.at(-1).theta);
+  dot(c,probe,'#1b2838',5);
+  const [r,rw,rh]=context('radial');
+  const px=(a,v)=>[42+a/tau*(rw-58),rh-32-(v+0.05)/(motion.outer_radius+0.15)*(rh-48)];
+  for(let v=0;v<=motion.outer_radius+0.001;v+=0.25){
+    line(r,[px(0,v),px(tau,v)],'#edf0f3',1);r.fillStyle='#6c7580';r.fillText(v.toFixed(2),3,px(0,v)[1]+4);
+  }
+  [[0,'0'],[Math.PI,'π'],[tau,'2π']].forEach(([a,label])=>{r.fillStyle='#6c7580';r.fillText(label,px(a,0)[0]-4,rh-8);});
+  band(r,upper.map((v,i)=>px(theta[i],v)),lower.map((v,i)=>px(theta[i],v)));
+  if($('reveal').checked)line(r,data.truth.map((v,i)=>px(theta[i],v)),'#747e89');
+  line(r,mean.map((v,i)=>px(theta[i],v)),'#2463a7',2);
+  data.observations.slice(0,n).forEach(o=>dot(r,px(((o.theta%tau)+tau)%tau,o.measured_radius),'#c65c22',2.5));
+  const m=data.metrics[n];
+  $('stats').textContent=`${n} / ${data.events.length} touches    ·    ${time.toFixed(1)} s    ·    RMSE ${m.rmse.toFixed(4)}    ·    ${status}`;
+  $('timeline').value=Math.round(time/total*1000);
+}
+function toggle(){playing=!playing;if(playing&&time>=total)time=0;$('play').textContent=playing?'Pause':'Play';}
+$('play').onclick=toggle;
+$('restart').onclick=()=>{time=0;draw();};
+$('timeline').oninput=e=>{time=total*Number(e.target.value)/1000;draw();};
+$('reveal').onchange=draw;
+window.addEventListener('resize',draw);
+function frame(now){
+  if(previous!==null&&playing){time=Math.min(total,time+Math.min((now-previous)/1000,0.1)*Number($('speed').value));if(time>=total){playing=false;$('play').textContent='Play';}draw();}
+  previous=now;requestAnimationFrame(frame);
+}
+draw();requestAnimationFrame(frame);
+</script>
+</html>

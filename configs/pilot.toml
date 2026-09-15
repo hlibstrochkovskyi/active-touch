@@ -1,0 +1,10 @@
+# Development pilot: CLI varies shape parameters and pairs all five policies.
+# This is not the final held-out study from PROJECT_PLAN.md.
+[experiment]
+touches = 32
+initial = 8
+candidates = 128
+integration_points = 128
+evaluation_points = 1024
+noise_std = 0.005
+seed = 100

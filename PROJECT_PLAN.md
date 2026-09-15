@@ -1,6 +1,6 @@
 # Touch Explorer: complete project plan
 
-**Status:** proposed design, researched on 2026-09-15. Implementation, dependency installation, and performance measurements are future work. Numeric defaults below are starting choices to validate, not experimental findings.
+**Status:** design researched on 2026-09-15. The simulator, fixed-parameter GP, five policies, logs, pilot CLI, and browser replay are now implemented; see [README.md](README.md) for current commands and [the first pilot](docs/first-pilot.md) for initial measurements. The later reliability study and extensions below remain planned. Defaults in this design are starting choices, not claimed optimal settings.
 
 ## 1. The project we are actually building
 
