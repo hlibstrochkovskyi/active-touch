@@ -86,3 +86,67 @@ def test_optional_hyperparameter_fit_stays_within_declared_bounds():
     assert config.signal_bounds[0] <= signal <= config.signal_bounds[1]
     assert config.length_bounds[0] <= length <= config.length_bounds[1]
     assert np.isfinite(model.predict(np.linspace(0, 2 * np.pi, 20))[0]).all()
+
+
+def test_learned_kernel_survives_unscheduled_fit_and_warm_starts(monkeypatch):
+    from touch_explorer import model as module
+
+    gp = RadialGP(ModelConfig(learn_hyperparameters=True))
+    obs = observations((0.35, 0.72, 0.42), noise=0.01)
+    gp.fit(obs, optimize=True)
+    learned = gp.hyperparameters.copy()
+    assert not np.isclose(learned["length_scale"], gp.config.length_scale)
+    extended = (*obs, ContactObservation(2.0, 0.61, 0.0001))
+    gp.fit(extended)
+    assert gp.hyperparameters == learned
+
+    optimizer = module.optimize_kernel
+    starts = []
+
+    def capture(objective, initial_theta, bounds):
+        starts.append(initial_theta.copy())
+        return optimizer(objective, initial_theta, bounds)
+
+    monkeypatch.setattr(module, "optimize_kernel", capture)
+    gp.fit(extended, optimize=True)
+    np.testing.assert_allclose(
+        starts[0], np.log([learned["signal_std"] ** 2, learned["length_scale"]])
+    )
+
+
+def test_optimizer_failure_refits_new_data_with_last_valid_kernel(monkeypatch):
+    from touch_explorer import model as module
+
+    gp = RadialGP(ModelConfig(learn_hyperparameters=True))
+    obs = observations((0.35, 0.72, 0.42), noise=0.01)
+    gp.fit(obs, optimize=True)
+    learned = gp.hyperparameters.copy()
+
+    def fail(*args, **kwargs):
+        raise RuntimeError("test optimizer failure")
+
+    monkeypatch.setattr(module, "optimize_kernel", fail)
+    extended = (*obs, ContactObservation(5.0, 0.31, 0.0001))
+    gp.fit(extended, optimize=True)
+    assert gp.hyperparameters == learned
+    assert gp.fit_status == "fallback"
+    assert "test optimizer failure" in gp.fit_message
+    reference = RadialGP(
+        ModelConfig(signal_std=learned["signal_std"], length_scale=learned["length_scale"])
+    )
+    reference.fit(extended)
+    np.testing.assert_allclose(gp.predict([0.2, 5.0]), reference.predict([0.2, 5.0]))
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [
+        {"learn_hyperparameters": "true"},
+        {"length_bounds": [0.1, float("inf")]},
+        {"signal_bounds": [0.05, float("nan")]},
+        {"learn_hyperparameters": True, "length_scale": 2.0},
+    ],
+)
+def test_invalid_learning_settings(kwargs):
+    with pytest.raises(ValueError):
+        ModelConfig(**kwargs)
