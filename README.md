@@ -50,6 +50,8 @@ Guarded stopping requires the configured interval width, minimum touch count, an
 
 `reliability.json` reports stops, false stops, exhausted budgets, errors, interval coverage, and optimizer fallbacks. No-stop cases have a null false-stop rate. `reliability.png` compares the variants; these are development results with different actual sensing budgets.
 
+The [first reliability study](docs/reliability-study.md) completed 60 runs. Uncertainty-only stopping failed the accuracy criteria in 3/12 cases; guarded stopping in 2/12. The remaining failures expose narrow recesses that the model confidently misses.
+
 For individual runs, `[model] learn_hyperparameters = true` fits bounded kernel parameters at touch 16 and every 8 touches afterward. Learned values persist between optimizations and warm-start the next fit. A failed optimization refits all current data with the last valid parameters and records the failure. `[experiment] safeguard_every = 5` enables periodic gap probing; `[stopping] mode` accepts `budget` (default), `uncertainty`, or `guarded`.
 
 ## Tests
