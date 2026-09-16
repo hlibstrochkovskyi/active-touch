@@ -38,6 +38,20 @@ Results include `comparison.png`, `summary.json`, and each episode's observation
 
 The [first pilot](docs/first-pilot.md) completed all 50 episodes. The simple gap baseline was slightly better than the cost policy in this small sample.
 
+## Test confidence and stopping
+
+```bash
+uv run --frozen touch-explorer reliability --config configs/reliability.toml --seeds 4 --output results/reliability
+```
+
+This runs 60 matched development episodes: circle, ellipse, and narrow-recess cases across five variants. They isolate fixed versus learned GP parameters, a largest-gap touch every fifth post-initialization action, and uncertainty-only versus guarded stopping. Both stopping variants use the same coverage safeguard.
+
+Guarded stopping requires the configured interval width, minimum touch count, angular coverage, and two additional audit touches with acceptable prediction residuals. A confidence stop is a model decision, not a correctness guarantee. The evaluator separately flags a false stop when final radial RMSE exceeds 0.01 or sampled maximum error exceeds 0.03.
+
+`reliability.json` reports stops, false stops, exhausted budgets, errors, interval coverage, and optimizer fallbacks. No-stop cases have a null false-stop rate. `reliability.png` compares the variants; these are development results with different actual sensing budgets.
+
+For individual runs, `[model] learn_hyperparameters = true` fits bounded kernel parameters at touch 16 and every 8 touches afterward. Learned values persist between optimizations and warm-start the next fit. A failed optimization refits all current data with the last valid parameters and records the failure. `[experiment] safeguard_every = 5` enables periodic gap probing; `[stopping] mode` accepts `budget` (default), `uncertainty`, or `guarded`.
+
 ## Tests
 
 ```bash
@@ -55,6 +69,7 @@ Tests cover analytic geometry, collision/noise separation, motion accounting, th
 - `decisions.jsonl`: chosen actions, scores, and estimated costs.
 - `truth.jsonl`: exact geometry and events for evaluation/replay only.
 - `metrics.csv`: errors, interval coverage, motion time, and computation time.
+- `model.jsonl`: fitted parameters, optimization attempts, warnings, and fallback reasons.
 - `snapshots.npz`: prior and posterior curves after each completed cycle.
 
 Rebuild a run's figures and replay without executing the simulator:
@@ -65,6 +80,6 @@ uv run --frozen touch-explorer replay results/demo
 
 ## Next milestones
 
-The current model has fixed hyperparameters and always runs to its touch budget. Online parameter fitting, coverage safeguards, stopping diagnostics, and the final held-out study remain planned. General implicit surfaces and hardware are later extensions.
+The remaining evaluation work is sensor/model mismatch, the final held-out benchmark, paired statistical analysis, and a final report. General implicit surfaces and hardware are optional later extensions.
 
 See the [project plan](PROJECT_PLAN.md) for the mathematics and milestones, and [research notes](RESEARCH_NOTES.md) for sources and assumptions. Everything runs on the CPU; no pretrained model or external dataset is needed.

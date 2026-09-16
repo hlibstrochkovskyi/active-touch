@@ -86,3 +86,59 @@ def test_benchmark_failures_are_reported_and_return_nonzero(tmp_path, config_fil
     assert len(rows) == 5
     assert all(row["status"] == "failed" for row in rows)
     assert "deliberate numerical failure" in rows[0]["error"]
+
+
+def test_reliability_command_writes_all_variants(tmp_path, config_file):
+    output = tmp_path / "reliability"
+    assert (
+        main(
+            [
+                "reliability",
+                "--config",
+                str(config_file),
+                "--output",
+                str(output),
+                "--seeds",
+                "1",
+                "--shapes",
+                "circle",
+            ]
+        )
+        == 0
+    )
+    rows = json.loads((output / "runs.json").read_text())
+    assert len(rows) == 5
+    assert {r["variant"] for r in rows} == {
+        "fixed-budget",
+        "learned-budget",
+        "learned-coverage",
+        "uncertainty-stop",
+        "guarded-stop",
+    }
+    assert (output / "reliability.json").exists()
+    assert (output / "reliability.png").stat().st_size > 1000
+
+
+def test_variable_length_benchmark_and_demo_report_real_stop(tmp_path, config_file, capsys):
+    with config_file.open("a") as handle:
+        handle.write('\n[stopping]\nmode="uncertainty"\nhalf_width=1.0\n')
+    output = tmp_path / "stopped"
+    assert main(["demo", "--config", str(config_file), "--output", str(output)]) == 0
+    assert "4 / 8 touches" in capsys.readouterr().out
+    assert "confident" in (output / "replay.html").read_text()
+    assert (
+        main(
+            [
+                "benchmark",
+                "--config",
+                str(config_file),
+                "--output",
+                str(tmp_path / "bench"),
+                "--seeds",
+                "1",
+                "--shapes",
+                "circle",
+            ]
+        )
+        == 0
+    )

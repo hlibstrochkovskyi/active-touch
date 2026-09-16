@@ -87,7 +87,7 @@ function draw(){
   if($('reveal').checked)line(c,data.truth.map((v,i)=>polar(v,theta[i])),'#747e89',1.5,true);
   line(c,mean.map((v,i)=>polar(v,theta[i])),'#2463a7',2,true);
   data.observations.slice(0,n).forEach(o=>dot(c,polar(o.measured_radius,o.theta),'#c65c22',2.7));
-  let status='Finished', probe;
+  let status=data.status==='confident'?'Confidence stop':'Budget exhausted', probe;
   if(n<data.events.length){
     const e=data.events[n], t=time-ends[n], [a,b,d]=durations[n];
     let angle=e.theta, radius=motion.outer_radius;
@@ -110,7 +110,7 @@ function draw(){
   line(r,mean.map((v,i)=>px(theta[i],v)),'#2463a7',2);
   data.observations.slice(0,n).forEach(o=>dot(r,px(((o.theta%tau)+tau)%tau,o.measured_radius),'#c65c22',2.5));
   const m=data.metrics[n];
-  $('stats').textContent=`${n} / ${data.events.length} touches    ·    ${time.toFixed(1)} s    ·    RMSE ${m.rmse.toFixed(4)}    ·    ${status}`;
+  $('stats').textContent=`${n} / ${data.config.experiment.touches} touches    ·    ${time.toFixed(1)} s    ·    RMSE ${m.rmse.toFixed(4)}    ·    ${status}`;
   $('timeline').value=Math.round(time/total*1000);
 }
 function toggle(){playing=!playing;if(playing&&time>=total)time=0;$('play').textContent=playing?'Pause':'Play';}

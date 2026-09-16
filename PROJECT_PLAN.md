@@ -1,6 +1,6 @@
 # Touch Explorer: complete project plan
 
-**Status:** design researched on 2026-09-15. The simulator, fixed-parameter GP, five policies, logs, pilot CLI, and browser replay are now implemented; see [README.md](README.md) for current commands and [the first pilot](docs/first-pilot.md) for initial measurements. The later reliability study and extensions below remain planned. Defaults in this design are starting choices, not claimed optimal settings.
+**Status:** design researched on 2026-09-15; implementation updated 2026-09-16. The simulator, fixed/learned GP, five policies, optional coverage safeguard, empirical stopping rules, logs, development studies, and browser replay are implemented. See [README.md](README.md) for current commands. Sensor mismatch, the final held-out study, and optional extensions below remain planned. Defaults in this design are starting choices, not claimed optimal settings.
 
 ## 1. The project we are actually building
 

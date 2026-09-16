@@ -100,6 +100,7 @@ def render_run(folder: str | Path) -> None:
     # Replay uses saved posterior samples, not fitting or execution on the animation clock.
     take = np.arange(0, len(angles), max(1, len(angles) // 512))
     payload = {
+        "status": json.loads((folder / "metadata.json").read_text())["status"],
         "config": config,
         "observations": observations,
         "events": events,
@@ -132,6 +133,7 @@ def comparison(folder: Path, runs: list[dict]) -> None:
     if not matched:
         return
     traces = {row["run"]: read_metrics(folder / row["run"]) for row in matched}
+    touch_horizon = max(len(trace) for trace in traces.values())
     # Descriptive pilot horizon only, recorded explicitly; preregister a final-study horizon.
     horizon = min(trace[-1]["motion_time"] for trace in traces.values())
     time_grid = np.linspace(0, horizon, 300)
@@ -145,7 +147,7 @@ def comparison(folder: Path, runs: list[dict]) -> None:
             trace = traces[row["run"]]
             times = np.array([m["motion_time"] for m in trace])
             errors = np.array([m["rmse"] for m in trace])
-            touch_curves.append(errors)
+            touch_curves.append(np.pad(errors, (0, touch_horizon - len(errors)), mode="edge"))
             indices = np.searchsorted(times, time_grid, side="right") - 1
             time_curves.append(errors[indices])
             edges = np.r_[times[times < horizon], horizon]
@@ -172,9 +174,9 @@ def comparison(folder: Path, runs: list[dict]) -> None:
         axis.grid(alpha=0.2)
         axis.set_ylabel("Mean radial RMSE / R")
         axis.legend()
-    left.set_xlabel("Completed touches")
+    left.set_xlabel("Available touches (estimate held after stopping)")
     right.set_xlabel("Modeled motion time (s)")
-    figure.suptitle(f"Pilot comparison · {len(complete)} matched cases · fixed GP parameters")
+    figure.suptitle(f"Pilot comparison · {len(complete)} matched cases")
     figure.savefig(folder / "comparison.png", dpi=150)
     figure.savefig(folder / "comparison.svg")
     write_json(

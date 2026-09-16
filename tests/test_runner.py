@@ -6,6 +6,7 @@ import pytest
 
 from touch_explorer.config import Config, ExperimentConfig, load_config
 from touch_explorer.runner import run_episode, save_episode
+from touch_explorer.stopping import StoppingConfig
 from touch_explorer.world import Shape
 
 
@@ -105,3 +106,77 @@ def test_strict_config_loading(tmp_path):
 def test_invalid_experiment_settings(kwargs):
     with pytest.raises(ValueError):
         ExperimentConfig(**kwargs)
+
+
+def test_coverage_safeguard_uses_post_initialization_counter():
+    config = small_config()
+    guarded = replace(config, experiment=replace(config.experiment, safeguard_every=5))
+    result = run_episode(guarded)
+    assert [i + 1 for i, d in enumerate(result.decisions) if d.reason == "coverage"] == [9, 14]
+    assert result.observations[:4] == run_episode(config).observations[:4]
+
+
+def test_early_stop_reports_actual_count_and_saves_status(tmp_path):
+    config = replace(small_config(), stopping=StoppingConfig(mode="uncertainty", half_width=1))
+    result = run_episode(config)
+    assert result.status == "confident"
+    assert len(result.observations) == config.experiment.initial
+    save_episode(result, tmp_path / "early")
+    metadata = json.loads((tmp_path / "early" / "metadata.json").read_text())
+    assert metadata["status"] == "confident"
+    assert metadata["actual_touches"] == config.experiment.initial
+
+
+def test_guarded_audits_are_actions_and_consume_budget():
+    config = replace(
+        small_config(),
+        stopping=StoppingConfig(
+            mode="guarded", half_width=1, min_touches=4, max_gap_degrees=360, innovation_limit=100
+        ),
+    )
+    result = run_episode(config)
+    assert result.status == "confident"
+    assert len(result.observations) == 6
+    assert [d.reason for d in result.decisions[-2:]] == ["audit", "audit"]
+    assert result.metrics[-1]["motion_time"] == pytest.approx(
+        sum(e.duration for e in result.events)
+    )
+    capped = replace(config, experiment=replace(config.experiment, touches=4))
+    assert run_episode(capped).status == "budget_exhausted"
+
+
+def test_model_diagnostics_record_learning_schedule():
+    from touch_explorer.model import ModelConfig
+
+    config = replace(small_config(), model=ModelConfig(learn_hyperparameters=True))
+    result = run_episode(config)
+    assert len(result.model_diagnostics) == 17
+    assert not any(d["optimization_attempted"] for d in result.model_diagnostics[:16])
+    assert result.model_diagnostics[16]["optimization_attempted"]
+    assert "signal_std" in result.model_diagnostics[16]
+
+
+def test_narrow_unseen_recess_can_trigger_false_confidence():
+    from touch_explorer.model import ModelConfig
+
+    config = Config(
+        experiment=ExperimentConfig(touches=32, candidates=64, noise_std=0),
+        model=ModelConfig(mean=0.6, signal_std=0.05, length_scale=1.2),
+        shape=Shape("circle", base=0.6),
+        stopping=StoppingConfig(mode="uncertainty"),
+    )
+    circle = run_episode(config)
+    # A recess between probed rays: same observations, different true geometry.
+    angles = np.sort([o.theta % (2 * np.pi) for o in circle.observations])
+    gaps = np.diff(np.r_[angles, angles[0] + 2 * np.pi])
+    index = int(np.argmax(gaps))
+    phase = angles[index] + gaps[index] / 2
+    hidden = replace(config, shape=Shape("recess", base=0.6, depth=0.18, width=0.02, phase=phase))
+    recess = run_episode(hidden)
+    assert circle.status == recess.status == "confident"
+    assert len(circle.observations) == len(recess.observations)
+    np.testing.assert_allclose(
+        [o.measured_radius for o in circle.observations],
+        [o.measured_radius for o in recess.observations],
+    )
+    assert recess.metrics[-1]["max_radial_error"] > 0.15

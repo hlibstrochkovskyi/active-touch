@@ -1,4 +1,4 @@
-"""Run a demo, replay saved data, or compare the five fixed-parameter policies."""
+"""Run a demo, replay saved data, or compare sensing policies and stopping rules."""
 
 import argparse
 import sys
@@ -11,6 +11,7 @@ import numpy as np
 from .config import Config, load_config
 from .plotting import comparison, render_run
 from .policies import POLICIES
+from .reliability import run_study
 from .runner import provenance, run_episode, save_episode, write_json
 from .world import Shape
 
@@ -72,7 +73,11 @@ def benchmark(config: Config, folder: Path, seeds: int, shapes: list[str]) -> in
                 try:
                     result = run_episode(run_config)
                     save_episode(result, folder / run_name)
-                    row.update(status="budget_exhausted", final_rmse=result.metrics[-1]["rmse"])
+                    row.update(
+                        status=result.status,
+                        final_rmse=result.metrics[-1]["rmse"],
+                        actual_touches=len(result.observations),
+                    )
                 except Exception as exc:
                     row.update(status="failed", error=f"{type(exc).__name__}: {exc}")
                     failure_folder = folder / run_name
@@ -93,13 +98,16 @@ def benchmark(config: Config, folder: Path, seeds: int, shapes: list[str]) -> in
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Contact-based shape exploration")
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("demo", "benchmark"):
+    for name in ("demo", "benchmark", "reliability"):
         command = commands.add_parser(name)
         command.add_argument("--config", type=Path)
         command.add_argument("--output", type=Path, default=Path("results") / name)
-        if name == "benchmark":
+        if name in ("benchmark", "reliability"):
             command.add_argument("--seeds", type=int, default=2)
-            command.add_argument("--shapes", default=",".join(SHAPES))
+            command.add_argument(
+                "--shapes",
+                default="circle,ellipse,recess" if name == "reliability" else ",".join(SHAPES),
+            )
     replay = commands.add_parser("replay", help="render saved snapshots without fitting")
     replay.add_argument("folder", type=Path)
     try:
@@ -109,6 +117,10 @@ def main(argv=None) -> int:
             print(f"Replay: {(args.folder / 'replay.html').resolve()}")
             return 0
         config = load_config(args.config) if args.config else Config()
+        if args.command == "reliability":
+            return run_study(
+                config, args.output, args.seeds, args.shapes.split(","), benchmark_shape, SHAPES
+            )
         if args.command == "benchmark":
             return benchmark(config, args.output, args.seeds, args.shapes.split(","))
         if args.output.exists():
@@ -118,7 +130,8 @@ def main(argv=None) -> int:
         save_episode(result, args.output)
         render_run(args.output)
         print(
-            f"{config.experiment.touches} touches · RMSE {result.metrics[-1]['rmse']:.4f}"
+            f"{len(result.observations)} / {config.experiment.touches} touches · {result.status}"
+            f" · RMSE {result.metrics[-1]['rmse']:.4f}"
             f" · {perf_counter() - start:.2f}s wall time"
         )
         print(f"Replay: {(args.output / 'replay.html').resolve()}")

@@ -6,6 +6,7 @@ from pathlib import Path
 
 from .model import ModelConfig
 from .policies import POLICIES
+from .stopping import StoppingConfig
 from .types import MotionConfig, finite
 from .world import Shape
 
@@ -20,6 +21,7 @@ class ExperimentConfig:
     evaluation_points: int = 1024
     noise_std: float = 0.005
     seed: int = 7
+    safeguard_every: int = 0
 
     def __post_init__(self):
         for name in ("touches", "initial", "candidates", "integration_points", "evaluation_points"):
@@ -37,6 +39,8 @@ class ExperimentConfig:
         if self.policy not in POLICIES:
             raise ValueError(f"unknown policy: {self.policy}")
         finite(self.noise_std, "noise_std")
+        if type(self.safeguard_every) is not int or self.safeguard_every < 0:
+            raise ValueError("safeguard_every must be a nonnegative integer")
 
 
 @dataclass(frozen=True)
@@ -45,6 +49,7 @@ class Config:
     shape: Shape = field(default_factory=Shape)
     model: ModelConfig = field(default_factory=ModelConfig)
     motion: MotionConfig = field(default_factory=MotionConfig)
+    stopping: StoppingConfig = field(default_factory=StoppingConfig)
 
     def __post_init__(self):
         low, high = self.shape.bounds
@@ -58,6 +63,7 @@ def config_from_dict(data: dict) -> Config:
         "shape": Shape,
         "model": ModelConfig,
         "motion": MotionConfig,
+        "stopping": StoppingConfig,
     }
     unknown = data.keys() - classes.keys()
     if unknown:
