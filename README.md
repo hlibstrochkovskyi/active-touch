@@ -78,6 +78,8 @@ outlier_std = 0.0
 
 Repeated touches cannot identify a constant sensor offset separately from object radius without additional calibration information. These experiments measure degradation; the GP has no bias correction or robust outlier likelihood.
 
+The [sensor mismatch study](docs/mismatch-study.md) completed all 48 episodes. Guarded stopping failed the accuracy criteria in 2/6 nominal cases, 6/6 biased cases, and 5/6 outlier cases. With underestimated noise, all three confidence stops were false and the other three runs exhausted the budget.
+
 ## Tests
 
 ```bash
