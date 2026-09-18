@@ -56,6 +56,7 @@ def _run_episode(config: Config) -> Episode:
         noise_std=settings.noise_std,
         seed=noise_seed,
         initial_angle=float(candidates[0]),
+        sensor=config.sensor,
     )
     model = RadialGP(config.model)
     policy = Policy(

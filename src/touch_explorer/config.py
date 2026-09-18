@@ -8,7 +8,7 @@ from .model import ModelConfig
 from .policies import POLICIES
 from .stopping import StoppingConfig
 from .types import MotionConfig, finite
-from .world import Shape
+from .world import SensorConfig, Shape
 
 
 @dataclass(frozen=True)
@@ -50,6 +50,7 @@ class Config:
     model: ModelConfig = field(default_factory=ModelConfig)
     motion: MotionConfig = field(default_factory=MotionConfig)
     stopping: StoppingConfig = field(default_factory=StoppingConfig)
+    sensor: SensorConfig = field(default_factory=SensorConfig)
 
     def __post_init__(self):
         low, high = self.shape.bounds
@@ -64,6 +65,7 @@ def config_from_dict(data: dict) -> Config:
         "model": ModelConfig,
         "motion": MotionConfig,
         "stopping": StoppingConfig,
+        "sensor": SensorConfig,
     }
     unknown = data.keys() - classes.keys()
     if unknown:

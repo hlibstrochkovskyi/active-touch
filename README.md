@@ -54,6 +54,30 @@ The [first reliability study](docs/reliability-study.md) completed 60 runs. Unce
 
 For individual runs, `[model] learn_hyperparameters = true` fits bounded kernel parameters at touch 16 and every 8 touches afterward. Learned values persist between optimizations and warm-start the next fit. A failed optimization refits all current data with the last valid parameters and records the failure. `[experiment] safeguard_every = 5` enables periodic gap probing; `[stopping] mode` accepts `budget` (default), `uncertainty`, or `guarded`.
 
+## Test sensor mismatch
+
+```bash
+uv run --frozen touch-explorer mismatch --config configs/mismatch.toml --seeds 2 --output results/mismatch
+```
+
+This runs 48 development episodes: four sensor conditions, two methods, three shape families, and two instances per family. Conditions are nominal sensing, a constant +0.015 radius bias, three times the assumed noise standard deviation, and 5% additive Gaussian contamination with standard deviation 0.05. Each fault is tested separately. Both methods learn GP parameters and probe the largest gap every fifth later action; one uses the full budget, the other guarded stopping. Settings and accuracy thresholds are fixed before running the comparison.
+
+`mismatch.json`, `mismatch.png`, and `mismatch.svg` report the same metrics as the reliability study. The manifest records every resolved condition. The command replaces `[sensor]` with the four prescribed conditions; `demo`, `benchmark`, and `reliability` instead use the configured sensor settings.
+
+For a custom sensor in those commands:
+
+```toml
+[sensor]
+noise_scale = 3.0
+bias = 0.0
+outlier_probability = 0.0
+outlier_std = 0.0
+```
+
+`[experiment] noise_std` remains the agent's assumed noise standard deviation. The simulator multiplies it by `noise_scale`, adds `bias`, and independently adds a zero-mean Gaussian outlier with the specified probability and standard deviation. Readings are not clipped. Fault settings are private to the simulator; observations still report the assumed variance. Geometry and physical motion remain exact. Default sensor settings reproduce earlier measurements exactly.
+
+Repeated touches cannot identify a constant sensor offset separately from object radius without additional calibration information. These experiments measure degradation; the GP has no bias correction or robust outlier likelihood.
+
 ## Tests
 
 ```bash
@@ -82,6 +106,6 @@ uv run --frozen touch-explorer replay results/demo
 
 ## Next milestones
 
-The remaining evaluation work is sensor/model mismatch, the final held-out benchmark, paired statistical analysis, and a final report. General implicit surfaces and hardware are optional later extensions.
+The remaining evaluation work is the final held-out benchmark, paired statistical analysis, and a final report. General implicit surfaces and hardware are optional later extensions.
 
 See the [project plan](PROJECT_PLAN.md) for the mathematics and milestones, and [research notes](RESEARCH_NOTES.md) for sources and assumptions. Everything runs on the CPU; no pretrained model or external dataset is needed.

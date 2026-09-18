@@ -9,6 +9,7 @@ from matplotlib.figure import Figure
 
 from .config import Config
 from .runner import Episode, provenance, run_episode, save_episode, write_json
+from .world import SensorConfig
 
 VARIANTS = (
     "fixed-budget",
@@ -45,6 +46,25 @@ def variant_configs(config: Config) -> dict[str, Config]:
     )
 
 
+def mismatch_configs(config: Config) -> dict[str, Config]:
+    """Predetermined one-fault-at-a-time conditions, sharing the agent's noise model."""
+    methods = variant_configs(config)
+    sensors = {
+        "nominal": SensorConfig(),
+        "bias": SensorConfig(bias=0.015),
+        "noise": SensorConfig(noise_scale=3),
+        "outliers": SensorConfig(outlier_probability=0.05, outlier_std=0.05),
+    }
+    return {
+        f"{fault}-{method}": replace(base, sensor=sensor)
+        for fault, sensor in sensors.items()
+        for method, base in (
+            ("budget", methods["learned-coverage"]),
+            ("guarded", methods["guarded-stop"]),
+        )
+    }
+
+
 def episode_outcome(
     result: Episode,
     *,
@@ -71,7 +91,7 @@ def episode_outcome(
     }
 
 
-def summarize(folder: Path, rows: list[dict]) -> dict:
+def summarize(folder: Path, rows: list[dict], *, study: str = "reliability") -> dict:
     summaries = []
     for name in dict.fromkeys(r["variant"] for r in rows):
         attempted = [r for r in rows if r["variant"] == name]
@@ -102,13 +122,14 @@ def summarize(folder: Path, rows: list[dict]) -> dict:
                 "optimizer_fallbacks": sum(r["optimizer_fallbacks"] for r in completed),
             }
         )
+    scope = "sensor mismatch" if study == "mismatch" else "reliability"
     report = {
-        "scope": "development reliability study; aggregates over successful runs",
+        "scope": f"development {scope} study; aggregates over successful runs",
         "rmse_tolerance": RMSE_TOLERANCE,
         "max_error_tolerance": MAX_ERROR_TOLERANCE,
         "variants": summaries,
     }
-    write_json(folder / "reliability.json", report)
+    write_json(folder / f"{study}.json", report)
     figure = Figure(figsize=(12, 7), layout="constrained")
     axes = figure.subplots(2, 2)
     x = np.arange(len(summaries))
@@ -131,9 +152,9 @@ def summarize(folder: Path, rows: list[dict]) -> dict:
     for ax in axes.flat:
         ax.set_xticks(x, labels, fontsize=8)
         ax.grid(axis="y", alpha=0.15)
-    figure.suptitle("Development reliability study · different sensing budgets")
-    figure.savefig(folder / "reliability.png", dpi=150)
-    figure.savefig(folder / "reliability.svg")
+    figure.suptitle(f"Development {scope} study · different sensing budgets")
+    figure.savefig(folder / f"{study}.png", dpi=150)
+    figure.savefig(folder / f"{study}.svg")
     return report
 
 
@@ -144,16 +165,21 @@ def run_study(
     shapes: list[str],
     shape_factory,
     shape_kinds: tuple[str, ...],
+    *,
+    study: str = "reliability",
 ) -> int:
     if seeds < 1 or not shapes or len(set(shapes)) != len(shapes) or set(shapes) - set(shape_kinds):
         raise ValueError("use positive --seeds and supported unique shapes")
-    variants = variant_configs(config)
+    if study not in {"reliability", "mismatch"}:
+        raise ValueError("unknown study")
+    variants = mismatch_configs(config) if study == "mismatch" else variant_configs(config)
+    scope = "sensor mismatch" if study == "mismatch" else "reliability"
     folder.mkdir(parents=True, exist_ok=False)
     write_json(
         folder / "manifest.json",
         {
             **provenance(),
-            "scope": "development reliability study",
+            "scope": f"development {scope} study",
             "shapes": shapes,
             "seeds_per_shape": seeds,
             "variants": {k: asdict(v) for k, v in variants.items()},
@@ -189,7 +215,7 @@ def run_study(
                 rows.append(row)
                 write_json(folder / "runs.json", rows)
                 print(f"{run_name}: {row['status']} ({row['wall_seconds']:.2f}s)", flush=True)
-    summarize(folder, rows)
+    summarize(folder, rows, study=study)
     failures = sum(r["status"] == "failed" for r in rows)
-    print(f"Saved {len(rows)} reliability runs; {failures} failed: {folder.resolve()}")
+    print(f"Saved {len(rows)} {study} runs; {failures} failed: {folder.resolve()}")
     return int(failures > 0)

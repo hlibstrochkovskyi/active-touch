@@ -10,6 +10,25 @@ from .types import ContactObservation, MotionConfig, ProbeAction, finite
 TAU = 2 * pi
 
 
+@dataclass(frozen=True)
+class SensorConfig:
+    """Private simulation faults; the agent still assumes experiment.noise_std."""
+
+    noise_scale: float = 1.0
+    bias: float = 0.0
+    outlier_probability: float = 0.0
+    outlier_std: float = 0.0
+
+    def __post_init__(self):
+        finite(self.noise_scale, "noise_scale")
+        finite(self.outlier_probability, "outlier_probability")
+        finite(self.outlier_std, "outlier_std")
+        if self.outlier_probability > 1:
+            raise ValueError("outlier_probability must be <= 1")
+        if isinstance(self.bias, bool) or not isfinite(self.bias):
+            raise ValueError("bias must be finite")
+
+
 def signed_arc(start: float, end: float) -> float:
     """Shortest signed rotation; antipodal ties go clockwise."""
     return (end - start + pi) % TAU - pi
@@ -124,6 +143,7 @@ class ContactWorld:
         noise_std: float,
         seed: int,
         initial_angle: float = 0,
+        sensor: SensorConfig | None = None,
     ):
         finite(noise_std, "noise_std")
         if not isinstance(seed, int) or seed < 0 or not isfinite(initial_angle):
@@ -133,6 +153,8 @@ class ContactWorld:
             raise ValueError("shape does not satisfy the configured workspace bounds")
         self._shape, self._motion = shape, motion
         self._noise_std, self._seed = noise_std, seed
+        self._sensor = sensor if sensor is not None else SensorConfig()
+        finite(noise_std * self._sensor.noise_scale, "actual noise_std")
         self._angle = initial_angle
         self._visits: dict[int, int] = {}
 
@@ -144,9 +166,17 @@ class ContactWorld:
         rng = np.random.default_rng(
             np.random.SeedSequence([self._seed, action.candidate_index, repeat])
         )
-        observation = ContactObservation(
-            action.theta, radius + rng.normal(0, self._noise_std), self._noise_std**2
-        )
+        measured = radius + rng.normal(0, self._noise_std * self._sensor.noise_scale)
+        measured += self._sensor.bias
+        if self._sensor.outlier_probability:
+            # Separate stream: adding contamination preserves the nominal noise draw.
+            outlier_rng = np.random.default_rng(
+                np.random.SeedSequence([self._seed, action.candidate_index, repeat, 1])
+            )
+            if outlier_rng.random() < self._sensor.outlier_probability:
+                measured += outlier_rng.normal(0, self._sensor.outlier_std)
+        # No clipping: even a physically implausible sensor reading is an observation.
+        observation = ContactObservation(action.theta, measured, self._noise_std**2)
         event = PrivateEvent(self._angle, action.theta, radius, self._motion)
         self._visits[action.candidate_index] = repeat + 1
         self._angle = action.theta

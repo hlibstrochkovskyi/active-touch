@@ -142,3 +142,55 @@ def test_variable_length_benchmark_and_demo_report_real_stop(tmp_path, config_fi
         )
         == 0
     )
+
+
+@pytest.mark.parametrize("fail", [False, True])
+def test_mismatch_command_saves_all_conditions_and_failures(
+    tmp_path, config_file, monkeypatch, fail
+):
+    from touch_explorer import reliability
+
+    if fail:
+
+        def broken(config):
+            raise ArithmeticError("sensor study failure")
+
+        monkeypatch.setattr(reliability, "run_episode", broken)
+    output = tmp_path / "mismatch"
+    assert main(
+        [
+            "mismatch",
+            "--config",
+            str(config_file),
+            "--output",
+            str(output),
+            "--seeds",
+            "1",
+            "--shapes",
+            "circle",
+        ]
+    ) == int(fail)
+    rows = json.loads((output / "runs.json").read_text())
+    manifest = json.loads((output / "manifest.json").read_text())
+    report = json.loads((output / "mismatch.json").read_text())
+    assert "sensor mismatch" in manifest["scope"]
+    assert len(rows) == len(manifest["variants"]) == len(report["variants"]) == 8
+    assert len({row["seed"] for row in rows}) == 1
+    assert len({row["case"] for row in rows}) == 1
+    assert (output / "mismatch.png").stat().st_size > 1000
+    for row in rows:
+        folder = output / row["run"]
+        if fail:
+            assert row["status"] == "failed"
+            assert "sensor study failure" in (folder / "failure.json").read_text()
+        else:
+            saved = json.loads((folder / "config.json").read_text())
+            assert saved["sensor"] == manifest["variants"][row["variant"]]["sensor"]
+    if not fail:
+        nominal = (
+            (output / "circle-7-nominal-budget" / "observations.jsonl").read_text().splitlines()
+        )
+        guarded = (
+            (output / "circle-7-nominal-guarded" / "observations.jsonl").read_text().splitlines()
+        )
+        assert nominal[:4] == guarded[:4]

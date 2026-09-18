@@ -2,9 +2,34 @@ import json
 from dataclasses import replace
 
 from touch_explorer.config import Config, ExperimentConfig
-from touch_explorer.reliability import episode_outcome, summarize
+from touch_explorer.reliability import episode_outcome, mismatch_configs, summarize
 from touch_explorer.runner import run_episode
 from touch_explorer.stopping import StoppingConfig
+from touch_explorer.world import SensorConfig
+
+
+def test_mismatch_matrix_changes_one_sensor_fault_at_a_time():
+    config = Config(sensor=SensorConfig(bias=0.9))
+    variants = mismatch_configs(config)
+    expected = {
+        "nominal": SensorConfig(),
+        "bias": SensorConfig(bias=0.015),
+        "noise": SensorConfig(noise_scale=3),
+        "outliers": SensorConfig(outlier_probability=0.05, outlier_std=0.05),
+    }
+    assert len(variants) == 8
+    reference = variants["nominal-budget"]
+    for fault, sensor in expected.items():
+        for method, mode in (("budget", "budget"), ("guarded", "guarded")):
+            variant = variants[f"{fault}-{method}"]
+            assert variant.sensor == sensor
+            assert variant.stopping.mode == mode
+            assert (
+                replace(variant, sensor=reference.sensor, stopping=reference.stopping) == reference
+            )
+    assert reference.experiment.noise_std == config.experiment.noise_std
+    assert reference.experiment.safeguard_every == 5
+    assert reference.model.learn_hyperparameters
 
 
 def test_false_stop_is_evaluated_after_the_episode():

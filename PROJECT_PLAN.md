@@ -566,6 +566,8 @@ Add one complication at a time: biased radius readings, occasional outliers, or 
 
 Compare assumed noise against actual simulator noise. Keep these runs separate from the correctly specified Gaussian baseline. This extension may be more informative than moving immediately to 3D.
 
+Implemented: private constant bias, scaled Gaussian noise, and independent additive Gaussian contamination. Defaults preserve earlier readings. `configs/mismatch.toml` and the `mismatch` command prescribe a development comparison of four sensor conditions under full-budget and guarded stopping. Both use learned kernels and the same coverage safeguard. The observation variance remains the assumed value; exact motion never exposes the sensor fault to the policy. Angular uncertainty and robust inference remain future extensions.
+
 ### C. General implicit surfaces
 
 Proceed only after completing the radial benchmark and identifying an unsupported geometry worth studying. A general boundary can be written f(x,y) = 0, but contact points alone do not provide signed distance. With zero prior mean and all zero targets, ordinary GP regression's posterior mean is zero everywhere. Signed constraints or a richer likelihood are essential. [Williams and Fitzgibbon, 2007](https://gpss.cc/gpip/abstract/owilliams.pdf).

@@ -98,15 +98,15 @@ def benchmark(config: Config, folder: Path, seeds: int, shapes: list[str]) -> in
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Contact-based shape exploration")
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("demo", "benchmark", "reliability"):
+    for name in ("demo", "benchmark", "reliability", "mismatch"):
         command = commands.add_parser(name)
         command.add_argument("--config", type=Path)
         command.add_argument("--output", type=Path, default=Path("results") / name)
-        if name in ("benchmark", "reliability"):
+        if name in ("benchmark", "reliability", "mismatch"):
             command.add_argument("--seeds", type=int, default=2)
             command.add_argument(
                 "--shapes",
-                default="circle,ellipse,recess" if name == "reliability" else ",".join(SHAPES),
+                default=",".join(SHAPES) if name == "benchmark" else "circle,ellipse,recess",
             )
     replay = commands.add_parser("replay", help="render saved snapshots without fitting")
     replay.add_argument("folder", type=Path)
@@ -117,9 +117,15 @@ def main(argv=None) -> int:
             print(f"Replay: {(args.folder / 'replay.html').resolve()}")
             return 0
         config = load_config(args.config) if args.config else Config()
-        if args.command == "reliability":
+        if args.command in ("reliability", "mismatch"):
             return run_study(
-                config, args.output, args.seeds, args.shapes.split(","), benchmark_shape, SHAPES
+                config,
+                args.output,
+                args.seeds,
+                args.shapes.split(","),
+                benchmark_shape,
+                SHAPES,
+                study=args.command,
             )
         if args.command == "benchmark":
             return benchmark(config, args.output, args.seeds, args.shapes.split(","))
