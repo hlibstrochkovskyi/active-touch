@@ -1,6 +1,7 @@
 """Run a demo, replay saved data, or compare sensing policies and stopping rules."""
 
 import argparse
+import json
 import sys
 from dataclasses import asdict, replace
 from pathlib import Path
@@ -9,6 +10,7 @@ from time import perf_counter
 import numpy as np
 
 from .config import Config, load_config
+from .heldout import analyze_folder, run_heldout
 from .plotting import comparison, render_run
 from .policies import POLICIES
 from .reliability import run_study
@@ -98,6 +100,12 @@ def benchmark(config: Config, folder: Path, seeds: int, shapes: list[str]) -> in
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Contact-based shape exploration")
     commands = parser.add_subparsers(dest="command", required=True)
+    heldout = commands.add_parser("heldout", help="run a frozen primary benchmark protocol")
+    heldout.add_argument("--protocol", type=Path, required=True)
+    heldout.add_argument("--output", type=Path, default=Path("results/heldout"))
+    heldout.add_argument("--workers", type=int, default=1)
+    analysis = commands.add_parser("analyze", help="rebuild held-out analysis without simulation")
+    analysis.add_argument("folder", type=Path)
     for name in ("demo", "benchmark", "reliability", "mismatch"):
         command = commands.add_parser(name)
         command.add_argument("--config", type=Path)
@@ -112,6 +120,10 @@ def main(argv=None) -> int:
     replay.add_argument("folder", type=Path)
     try:
         args = parser.parse_args(argv)
+        if args.command == "heldout":
+            return run_heldout(json.loads(args.protocol.read_text()), args.output, args.workers)
+        if args.command == "analyze":
+            return int(not analyze_folder(args.folder)["complete"])
         if args.command == "replay":
             render_run(args.folder)
             print(f"Replay: {(args.folder / 'replay.html').resolve()}")

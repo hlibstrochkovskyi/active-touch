@@ -49,6 +49,8 @@ def _run_episode(config: Config) -> Episode:
         for stream in range(3)
     ]
     phase = np.random.default_rng(phase_seed).uniform(0, TAU)
+    if settings.noise_seed is not None:
+        noise_seed = settings.noise_seed
     candidates = (phase + TAU * np.arange(settings.candidates) / settings.candidates) % TAU
     world = ContactWorld(
         config.shape,

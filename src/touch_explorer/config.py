@@ -21,6 +21,7 @@ class ExperimentConfig:
     evaluation_points: int = 1024
     noise_std: float = 0.005
     seed: int = 7
+    noise_seed: int | None = None
     safeguard_every: int = 0
 
     def __post_init__(self):
@@ -30,6 +31,10 @@ class ExperimentConfig:
                 raise ValueError(f"{name} must be a positive integer")
         if type(self.seed) is not int or self.seed < 0:
             raise ValueError("seed must be a nonnegative integer")
+        if self.noise_seed is not None and (
+            type(self.noise_seed) is not int or self.noise_seed < 0
+        ):
+            raise ValueError("noise_seed must be a nonnegative integer or null")
         if (
             self.initial > self.touches
             or self.touches % self.initial

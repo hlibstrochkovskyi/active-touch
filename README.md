@@ -80,6 +80,17 @@ Repeated touches cannot identify a constant sensor offset separately from object
 
 The [sensor mismatch study](docs/mismatch-study.md) completed all 48 episodes. Guarded stopping failed the accuracy criteria in 2/6 nominal cases, 6/6 biased cases, and 5/6 outlier cases. With underestimated noise, all three confidence stops were false and the other three runs exhausted the budget.
 
+## Held-out primary benchmark
+
+```bash
+uv run --frozen touch-explorer heldout --protocol configs/heldout.json --workers 2 --output results/heldout
+uv run --frozen touch-explorer analyze results/heldout
+```
+
+The [frozen protocol](docs/heldout-protocol.md) specifies 600 episodes on 20 new shapes, three correctly specified noise levels, two independent sensor-noise seeds, and five policies. It uses fixed GP parameters and 128 touches. Shape parameters, seeds, and analysis choices are stored before execution.
+
+`analysis.json` reports family/noise-level means and paired differences against largest-gap sampling. Bootstrap intervals resample whole shapes within families after averaging noise repeats. A missing or failed run withholds paired inference. `comparison.png` shows error against touches and modeled time; all raw episode logs remain replayable. The `analyze` command regenerates these outputs without rerunning the simulator.
+
 ## Tests
 
 ```bash

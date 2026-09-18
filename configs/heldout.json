@@ -1,0 +1,371 @@
+{
+  "config": {
+    "experiment": {
+      "policy": "cost",
+      "touches": 128,
+      "initial": 8,
+      "candidates": 256,
+      "integration_points": 256,
+      "evaluation_points": 4096,
+      "noise_std": 0.005,
+      "seed": 7,
+      "noise_seed": null,
+      "safeguard_every": 0
+    },
+    "shape": {
+      "kind": "recess",
+      "base": 0.55,
+      "a": 0.65,
+      "b": 0.4,
+      "depth": 0.18,
+      "width": 0.08,
+      "phase": 0.0
+    },
+    "model": {
+      "mean": 0.525,
+      "signal_std": 0.2,
+      "length_scale": 0.4,
+      "jitter": 1e-10,
+      "learn_hyperparameters": false,
+      "signal_bounds": [
+        0.05,
+        0.4
+      ],
+      "length_bounds": [
+        0.08,
+        1.2
+      ]
+    },
+    "motion": {
+      "outer_radius": 1.0,
+      "min_radius": 0.25,
+      "max_radius": 0.8,
+      "transit_speed": 1.0,
+      "inward_speed": 0.5,
+      "outward_speed": 1.0,
+      "dwell": 0.2
+    },
+    "stopping": {
+      "mode": "budget",
+      "half_width": 0.02,
+      "min_touches": 24,
+      "max_gap_degrees": 15.0,
+      "audit_touches": 2,
+      "innovation_limit": 2.5
+    },
+    "sensor": {
+      "noise_scale": 1.0,
+      "bias": 0.0,
+      "outlier_probability": 0.0,
+      "outlier_std": 0.0
+    }
+  },
+  "cases": [
+    {
+      "id": "circle-0",
+      "shape_seed": 700000,
+      "episode_seed": 800000,
+      "shape": {
+        "kind": "circle",
+        "base": 0.5410074917121936,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 0.6660259791874968
+      }
+    },
+    {
+      "id": "circle-1",
+      "shape_seed": 700001,
+      "episode_seed": 800001,
+      "shape": {
+        "kind": "circle",
+        "base": 0.4588683577191312,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 2.431313258478961
+      }
+    },
+    {
+      "id": "circle-2",
+      "shape_seed": 700002,
+      "episode_seed": 800002,
+      "shape": {
+        "kind": "circle",
+        "base": 0.5916889911267104,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 3.7384206496690418
+      }
+    },
+    {
+      "id": "circle-3",
+      "shape_seed": 700003,
+      "episode_seed": 800003,
+      "shape": {
+        "kind": "circle",
+        "base": 0.4854033624077779,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 3.2051093046643127
+      }
+    },
+    {
+      "id": "ellipse-0",
+      "shape_seed": 710000,
+      "episode_seed": 810000,
+      "shape": {
+        "kind": "ellipse",
+        "base": 0.55,
+        "a": 0.7183264120148135,
+        "b": 0.3803310702780055,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 4.835282193931753
+      }
+    },
+    {
+      "id": "ellipse-1",
+      "shape_seed": 710001,
+      "episode_seed": 810001,
+      "shape": {
+        "kind": "ellipse",
+        "base": 0.55,
+        "a": 0.6017150550886691,
+        "b": 0.4487915522804694,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 3.175407037074218
+      }
+    },
+    {
+      "id": "ellipse-2",
+      "shape_seed": 710002,
+      "episode_seed": 810002,
+      "shape": {
+        "kind": "ellipse",
+        "base": 0.55,
+        "a": 0.607926645884454,
+        "b": 0.3297214476573939,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 5.035162257314653
+      }
+    },
+    {
+      "id": "ellipse-3",
+      "shape_seed": 710003,
+      "episode_seed": 810003,
+      "shape": {
+        "kind": "ellipse",
+        "base": 0.55,
+        "a": 0.7016760290302014,
+        "b": 0.3486788767767927,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 5.234171271506197
+      }
+    },
+    {
+      "id": "rectangle-0",
+      "shape_seed": 720000,
+      "episode_seed": 820000,
+      "shape": {
+        "kind": "rectangle",
+        "base": 0.55,
+        "a": 0.4977947721304048,
+        "b": 0.34417802259935076,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 3.7529097682248205
+      }
+    },
+    {
+      "id": "rectangle-1",
+      "shape_seed": 720001,
+      "episode_seed": 820001,
+      "shape": {
+        "kind": "rectangle",
+        "base": 0.55,
+        "a": 0.5533376165050246,
+        "b": 0.351989556474247,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 0.002739514787742002
+      }
+    },
+    {
+      "id": "rectangle-2",
+      "shape_seed": 720002,
+      "episode_seed": 820002,
+      "shape": {
+        "kind": "rectangle",
+        "base": 0.55,
+        "a": 0.45308108020275606,
+        "b": 0.3578178836427556,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 0.5407331189540505
+      }
+    },
+    {
+      "id": "rectangle-3",
+      "shape_seed": 720003,
+      "episode_seed": 820003,
+      "shape": {
+        "kind": "rectangle",
+        "base": 0.55,
+        "a": 0.49383058458713547,
+        "b": 0.28231755117500146,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 0.1451317051834572
+      }
+    },
+    {
+      "id": "fourier-0",
+      "shape_seed": 730000,
+      "episode_seed": 830000,
+      "shape": {
+        "kind": "fourier",
+        "base": 0.5048741017947063,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 6.0745130173228
+      }
+    },
+    {
+      "id": "fourier-1",
+      "shape_seed": 730001,
+      "episode_seed": 830001,
+      "shape": {
+        "kind": "fourier",
+        "base": 0.6184582319808581,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 4.727977600744775
+      }
+    },
+    {
+      "id": "fourier-2",
+      "shape_seed": 730002,
+      "episode_seed": 830002,
+      "shape": {
+        "kind": "fourier",
+        "base": 0.6419969427148294,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 4.101747238943859
+      }
+    },
+    {
+      "id": "fourier-3",
+      "shape_seed": 730003,
+      "episode_seed": 830003,
+      "shape": {
+        "kind": "fourier",
+        "base": 0.5505736602619986,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 3.4540337915066632
+      }
+    },
+    {
+      "id": "recess-0",
+      "shape_seed": 740000,
+      "episode_seed": 840000,
+      "shape": {
+        "kind": "recess",
+        "base": 0.6340635454898211,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.1020974790894244,
+        "width": 0.05800784474637249,
+        "phase": 1.1748928833518355
+      }
+    },
+    {
+      "id": "recess-1",
+      "shape_seed": 740001,
+      "episode_seed": 840001,
+      "shape": {
+        "kind": "recess",
+        "base": 0.636687108545626,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.15371243927779332,
+        "width": 0.06455427458969883,
+        "phase": 1.9949919099835094
+      }
+    },
+    {
+      "id": "recess-2",
+      "shape_seed": 740002,
+      "episode_seed": 840002,
+      "shape": {
+        "kind": "recess",
+        "base": 0.5979276060577533,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.1265532160939261,
+        "width": 0.048356682044002966,
+        "phase": 3.648130208980217
+      }
+    },
+    {
+      "id": "recess-3",
+      "shape_seed": 740003,
+      "episode_seed": 840003,
+      "shape": {
+        "kind": "recess",
+        "base": 0.6434855570685276,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.23456086487437586,
+        "width": 0.07207551185668593,
+        "phase": 2.7408988489007236
+      }
+    }
+  ],
+  "noise_levels": [
+    0.0,
+    0.005,
+    0.015
+  ],
+  "noise_seeds": [
+    51001,
+    51002
+  ],
+  "policies": [
+    "random",
+    "sweep",
+    "gap",
+    "variance",
+    "cost"
+  ],
+  "checkpoints": [
+    8,
+    16,
+    32,
+    64,
+    128
+  ],
+  "time_horizon": 50.0,
+  "bootstrap_seed": 91001,
+  "bootstrap_samples": 10000
+}
