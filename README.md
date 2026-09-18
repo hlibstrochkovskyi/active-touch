@@ -91,6 +91,8 @@ The [frozen protocol](docs/heldout-protocol.md) specifies 600 episodes on 20 new
 
 `analysis.json` reports family/noise-level means and paired differences against largest-gap sampling. Bootstrap intervals resample whole shapes within families after averaging noise repeats. A missing or failed run withholds paired inference. `comparison.png` shows error against touches and modeled time; all raw episode logs remain replayable. The `analyze` command regenerates these outputs without rerunning the simulator.
 
+The [held-out study](docs/heldout-study.md) completed all 600 episodes. Cost-aware probing showed no clear advantage over largest-gap sampling on the predeclared 50-second metric. The report includes paired intervals, all run endpoints, family-level results, and a denser-grid check of the recess cases.
+
 ## Tests
 
 ```bash
@@ -119,6 +121,6 @@ uv run --frozen touch-explorer replay results/demo
 
 ## Next milestones
 
-The remaining evaluation work is the final held-out benchmark, paired statistical analysis, and a final report. General implicit surfaces and hardware are optional later extensions.
+The primary held-out benchmark and paired analysis are complete. Remaining work is held-out evaluation of learning/stopping and the final report across studies. General implicit surfaces and hardware are optional later extensions.
 
 See the [project plan](PROJECT_PLAN.md) for the mathematics and milestones, and [research notes](RESEARCH_NOTES.md) for sources and assumptions. Everything runs on the CPU; no pretrained model or external dataset is needed.
