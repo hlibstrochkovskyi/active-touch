@@ -188,3 +188,7 @@ uv run --frozen python scripts/build_readme_animation.py \
 The planned laptop simulation, evaluation, and report are **complete**. The observed stopping failures remain part of the result. Sensor calibration, robust noise models, or stopping bounds under explicit smoothness assumptions are possible next experiments. Physical hardware and more general shapes would require additional models and validation.
 
 [Project report](docs/project-report.md) · [Usage guide](docs/usage.md) · [Original plan](PROJECT_PLAN.md) · [Research notes](RESEARCH_NOTES.md)
+
+## License
+
+Licensed under the [MIT License](LICENSE). Copyright © 2026 Hlib Strochkovskyi.
