@@ -4,6 +4,8 @@ A simulated probe learns a fixed object's 2D outline from noisy contacts. It use
 
 The working core includes five shapes, five policies, exact motion costs, reproducible logs, comparison plots, and an offline browser replay. The object must be star-shaped about the known reference point: one boundary crossing per radial approach.
 
+The [project report](docs/project-report.md) brings together the mathematics, 720 held-out episodes, findings, and limitations.
+
 ## Run
 
 The project uses Python 3.12, managed by `uv`.
@@ -102,12 +104,14 @@ uv run --frozen touch-explorer analyze results/heldout-reliability
 
 This [frozen follow-up](docs/heldout-reliability-protocol.md) schedules 120 episodes on 12 fresh shapes, two noise realizations, and the five existing fitting/coverage/stopping variants. It reports actual touch budgets, false stops among confidence stops, budget exhaustion, family-level results, and paired shape-level intervals. Plotting holds the final estimate after stopping; it does not invent additional sensor readings.
 
+All [120 follow-up episodes](docs/heldout-reliability-study.md) completed. Learning reduced mean final RMSE by about 36%. Guarded stopping still produced six false confidence declarations in 24 runs; its two fewer failures than uncertainty-only stopping do not establish a general failure-rate improvement.
+
 ## Tests
 
 ```bash
 uv run --frozen pytest
-uv run --frozen ruff check src tests
-uv run --frozen ruff format --check src tests
+uv run --frozen ruff check src tests scripts
+uv run --frozen ruff format --check src tests scripts
 ```
 
 Tests cover analytic geometry, collision/noise separation, motion accounting, the GP posterior, variance-reduction math, shared initial measurements, data isolation, reproducibility, CLI output, and failure reporting.
@@ -128,8 +132,8 @@ Rebuild a run's figures and replay without executing the simulator:
 uv run --frozen touch-explorer replay results/demo
 ```
 
-## Next milestones
+## Project status
 
-The primary held-out benchmark and paired analysis are complete. Remaining work is held-out evaluation of learning/stopping and the final report across studies. General implicit surfaces and hardware are optional later extensions.
+The laptop simulation, both held-out studies, paired analyses, and final report are complete. Optional follow-ups include sensor calibration, robust noise models, or stopping bounds under explicit smoothness assumptions. General implicit surfaces and hardware require further modeling and validation.
 
 See the [project plan](PROJECT_PLAN.md) for the mathematics and milestones, and [research notes](RESEARCH_NOTES.md) for sources and assumptions. Everything runs on the CPU; no pretrained model or external dataset is needed.

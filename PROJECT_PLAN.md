@@ -1,6 +1,6 @@
 # Touch Explorer: complete project plan
 
-**Status:** design researched on 2026-09-15; implementation updated 2026-09-18. The simulator, fixed/learned GP, five policies, optional coverage safeguard, empirical stopping rules, sensor mismatch, development studies, and browser replay are implemented. The [primary held-out benchmark](docs/heldout-study.md) completed all 600 episodes under a [frozen protocol](docs/heldout-protocol.md), with paired analysis and a denser-grid check. See [README.md](README.md) for current commands. Held-out extension comparisons and the final synthesis remain outstanding. Defaults in this design are starting choices, not claimed optimal settings.
+**Status:** design researched on 2026-09-15; completed 2026-09-19. The simulator, fixed/learned GP, five policies, optional coverage safeguard, empirical stopping rules, sensor mismatch, development studies, and browser replay are implemented. The [primary held-out benchmark](docs/heldout-study.md) completed 600 episodes with paired analysis and a denser-grid check. The [learning/stopping follow-up](docs/heldout-reliability-study.md) completed another 120 episodes on fresh shapes. The [final report](docs/project-report.md) consolidates the mathematics, findings, and remaining limitations. See [README.md](README.md) for current commands. Defaults in this design are starting choices, not claimed optimal settings; optional extensions below remain additional scope.
 
 ## 1. The project we are actually building
 
