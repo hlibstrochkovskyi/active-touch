@@ -19,11 +19,11 @@ The project asks two questions: **where should the probe touch, and when does it
 The object stays fixed inside a free outer circle. Each action moves the probe along that circle, approaches inward until contact, takes a noisy radius reading, and retracts. The simulator accounts for the travel distance and duration of every stage.
 
 1. Start with eight contacts spread around the object.
-2. Fit a **Gaussian process (GP)**: a smooth radius estimate with uncertainty between measurements.
+2. Fit a [**Gaussian process (GP)**](https://en.wikipedia.org/wiki/Gaussian_process): a smooth radius estimate with uncertainty between measurements.
 3. Score candidate angles and choose the next touch.
 4. Update the estimate; continue until the touch budget or a stopping rule ends the run.
 
-The shape must be **star-shaped about a known interior point**: every outward ray from that point crosses the boundary once. Circles, ellipses, rectangles, wavy outlines, and recessed shapes are supported. Angles are exact, the probe is a point, and contact has no deformation or friction. These assumptions define what the simulation can test.
+The shape must be [**star-shaped about a known interior point**](https://en.wikipedia.org/wiki/Star-shaped_polygon): every outward ray from that point crosses the boundary once. Circles, ellipses, rectangles, wavy outlines, and recessed shapes are supported. Angles are exact, the probe is a point, and contact has no deformation or friction. These assumptions define what the simulation can test.
 
 ## Run it
 
@@ -79,11 +79,11 @@ $$
 {\widehat{T}(\theta)}.
 $$
 
-$c$ is the current posterior covariance: how strongly a measurement at one angle informs another. The sum averages the predicted variance reduction over $Q$ integration angles; $j$ is numerical jitter. $\widehat{T}$ estimates the complete action time, including travel, approach, dwell, and retraction. The candidate with the largest reduction per second wins.
+$c$ is the current posterior [covariance](https://en.wikipedia.org/wiki/Covariance_matrix): how strongly a measurement at one angle informs another. The sum averages the predicted variance reduction over $Q$ integration angles; $j$ is numerical jitter. $\widehat{T}$ estimates the complete action time, including travel, approach, dwell, and retraction. The candidate with the largest reduction per second wins.
 
 ### Kernel and posterior, if you want the detail
 
-Embed angles on a unit circle, then apply a Matérn 3/2 kernel:
+Embed angles on a unit circle, then apply a [Matérn covariance function](https://en.wikipedia.org/wiki/Mat%C3%A9rn_covariance_function) (also called a kernel):
 
 $$
 x(\theta)=(\cos\theta,\sin\theta),\qquad
@@ -104,7 +104,7 @@ $$
 s^2(\theta)=k(\theta,\theta)-k_\theta^T A^{-1}k_\theta.
 $$
 
-The implementation uses Cholesky solves rather than forming an inverse. The learned variants fit bounded kernel parameters at touch 16 and every eight touches afterward. Failed optimization retains the last valid parameters and refits using all current measurements.
+The implementation uses [Cholesky decomposition](https://en.wikipedia.org/wiki/Cholesky_decomposition) to solve the linear system rather than forming an inverse. The learned variants fit bounded kernel parameters at touch 16 and every eight touches afterward. Failed optimization retains the last valid parameters and refits using all current measurements.
 
 Derivations, assumptions, and source references are in the [project report](docs/project-report.md#2-inference-and-action-selection) and [research notes](RESEARCH_NOTES.md).
 
@@ -114,7 +114,7 @@ Derivations, assumptions, and source references are in the [project report](docs
 
 ### 1. A simple coverage strategy was competitive
 
-The primary study compared all five policies on 20 shapes, three noise levels, and two noise seeds, with 128 touches per run. **RMSE** is root mean square error: a summary of radial prediction errors around the outline that gives larger errors more weight. We also measure the largest error on a separate evaluation grid.
+The primary study compared all five policies on 20 shapes, three noise levels, and two noise seeds, with 128 touches per run. **[RMSE](https://en.wikipedia.org/wiki/Root_mean_square)** is root mean square error: a summary of radial prediction errors around the outline that gives larger errors more weight. We also measure the largest error on a separate evaluation grid.
 
 ![Mean reconstruction error versus completed touches and modeled motion time for five policies](docs/data/heldout-comparison.svg)
 
