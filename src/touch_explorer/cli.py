@@ -100,7 +100,7 @@ def benchmark(config: Config, folder: Path, seeds: int, shapes: list[str]) -> in
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(description="Contact-based shape exploration")
     commands = parser.add_subparsers(dest="command", required=True)
-    heldout = commands.add_parser("heldout", help="run a frozen primary benchmark protocol")
+    heldout = commands.add_parser("heldout", help="run a frozen benchmark protocol")
     heldout.add_argument("--protocol", type=Path, required=True)
     heldout.add_argument("--output", type=Path, default=Path("results/heldout"))
     heldout.add_argument("--workers", type=int, default=1)

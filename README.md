@@ -93,6 +93,15 @@ The [frozen protocol](docs/heldout-protocol.md) specifies 600 episodes on 20 new
 
 The [held-out study](docs/heldout-study.md) completed all 600 episodes. Cost-aware probing showed no clear advantage over largest-gap sampling on the predeclared 50-second metric. The report includes paired intervals, all run endpoints, family-level results, and a denser-grid check of the recess cases.
 
+## Held-out learning and stopping
+
+```bash
+uv run --frozen touch-explorer heldout --protocol configs/heldout-reliability.json --workers 2 --output results/heldout-reliability
+uv run --frozen touch-explorer analyze results/heldout-reliability
+```
+
+This [frozen follow-up](docs/heldout-reliability-protocol.md) schedules 120 episodes on 12 fresh shapes, two noise realizations, and the five existing fitting/coverage/stopping variants. It reports actual touch budgets, false stops among confidence stops, budget exhaustion, family-level results, and paired shape-level intervals. Plotting holds the final estimate after stopping; it does not invent additional sensor readings.
+
 ## Tests
 
 ```bash

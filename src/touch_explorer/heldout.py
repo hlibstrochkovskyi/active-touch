@@ -1,4 +1,4 @@
-"""Frozen protocols and paired, shape-level analysis for the primary benchmark."""
+"""Frozen protocols and paired shape-level analysis for held-out benchmarks."""
 
 import hashlib
 import json
@@ -13,6 +13,7 @@ from matplotlib.figure import Figure
 
 from .config import config_from_dict
 from .policies import POLICIES
+from .reliability import VARIANTS, episode_outcome, variant_configs
 from .runner import provenance, run_episode, save_episode, write_json
 from .types import finite
 from .world import SensorConfig
@@ -30,19 +31,26 @@ SECONDARY_METRICS = (
 
 
 def validate_protocol(protocol: dict) -> None:
+    reliability = protocol.get("study") == "reliability"
+    method_key = "variants" if reliability else "policies"
     required = {
         "config",
         "cases",
         "noise_levels",
         "noise_seeds",
-        "policies",
+        method_key,
         "checkpoints",
         "time_horizon",
         "bootstrap_seed",
         "bootstrap_samples",
     }
+    if reliability:
+        required.update(("study", "rmse_tolerance", "max_error_tolerance"))
     if set(protocol) != required:
         raise ValueError("protocol has missing or unknown fields")
+    if reliability:
+        finite(protocol["rmse_tolerance"], "rmse_tolerance", strict=True)
+        finite(protocol["max_error_tolerance"], "max_error_tolerance", strict=True)
     config = config_from_dict(protocol["config"])
     if (
         config.model.learn_hyperparameters
@@ -50,9 +58,9 @@ def validate_protocol(protocol: dict) -> None:
         or config.stopping.mode != "budget"
         or config.sensor != SensorConfig()
     ):
-        raise ValueError("primary study requires a fixed kernel, full budget, and nominal sensor")
+        raise ValueError("base config requires a fixed kernel, full budget, and nominal sensor")
     finite(protocol["time_horizon"], "time_horizon", strict=True)
-    for name in ("noise_levels", "noise_seeds", "policies", "checkpoints"):
+    for name in ("noise_levels", "noise_seeds", method_key, "checkpoints"):
         values = protocol[name]
         if not isinstance(values, list) or not values or len(set(values)) != len(values):
             raise ValueError(f"{name} must be a nonempty unique list")
@@ -63,7 +71,10 @@ def validate_protocol(protocol: dict) -> None:
             raise ValueError("seeds must be nonnegative integers")
     if type(protocol["bootstrap_samples"]) is not int or protocol["bootstrap_samples"] < 1000:
         raise ValueError("use at least 1000 bootstrap samples")
-    if (
+    if reliability:
+        if set(protocol["variants"]) != set(VARIANTS):
+            raise ValueError("reliability study requires the five declared variants")
+    elif (
         set(protocol["policies"]) - set(POLICIES)
         or "gap" not in protocol["policies"]
         or len(protocol["policies"]) < 2
@@ -93,31 +104,39 @@ def validate_protocol(protocol: dict) -> None:
 
 def schedule(protocol: dict) -> list[tuple[dict, object]]:
     validate_protocol(protocol)
+    reliability = protocol.get("study") == "reliability"
     jobs = []
     for case in protocol["cases"]:
         base = config_from_dict({**protocol["config"], "shape": case["shape"]})
+        methods = (
+            variant_configs(base)
+            if reliability
+            else {
+                name: replace(base, experiment=replace(base.experiment, policy=name))
+                for name in protocol["policies"]
+            }
+        )
         for level, noise_std in enumerate(protocol["noise_levels"]):
             for seed in protocol["noise_seeds"]:
                 sensor_seed = int(
                     np.random.SeedSequence([case["episode_seed"], seed, 71]).generate_state(1)[0]
                 )
-                for policy in protocol["policies"]:
+                for method, method_config in methods.items():
                     row = {
                         "case": case["id"],
                         "family": base.shape.kind,
                         "noise_std": noise_std,
                         "noise_seed": seed,
-                        "policy": policy,
-                        "run": f"{case['id']}-n{level}-s{seed}-{policy}",
+                        "variant" if reliability else "policy": method,
+                        "run": f"{case['id']}-n{level}-s{seed}-{method}",
                     }
                     config = replace(
-                        base,
+                        method_config,
                         experiment=replace(
-                            base.experiment,
+                            method_config.experiment,
                             seed=case["episode_seed"],
                             noise_seed=sensor_seed,
                             noise_std=noise_std,
-                            policy=policy,
                         ),
                     )
                     jobs.append((row, config))
@@ -171,7 +190,15 @@ def analyze(protocol: dict, rows: list[dict]) -> dict:
         if row["run"] not in expected or any(row[k] != v for k, v in expected[row["run"]].items()):
             raise ValueError("run does not match frozen protocol")
         seen[row["run"]] = row
-    failed = sum(row["status"] != "budget_exhausted" for row in rows)
+    reliability = protocol.get("study") == "reliability"
+
+    def valid_status(row):
+        allowed = {"budget_exhausted"}
+        if reliability and row["variant"] in ("uncertainty-stop", "guarded-stop"):
+            allowed.add("confident")
+        return row["status"] in allowed
+
+    failed = sum(not valid_status(row) for row in rows)
     report = {
         "scheduled": len(expected),
         "recorded": len(rows),
@@ -187,8 +214,18 @@ def analyze(protocol: dict, rows: list[dict]) -> dict:
         "95% percentile intervals resample shapes within families; "
         "marginal intervals, no multiple-comparison correction",
     }
+    if reliability:
+        report.update(
+            variants=[],
+            interpretation="paired variant minus reference; noise repeats averaged within shapes; "
+            "equal family weights; nominal 95% percentile intervals resample shapes "
+            "within families; false_stop contrast is per episode, not conditional on stopping; "
+            "conditional false-stop rates are reported separately; no multiplicity correction",
+        )
     if not report["complete"]:
         return report  # Do not silently discard a failed or missing matched run.
+    if reliability:
+        return analyze_reliability(protocol, rows, report)
     cases = {c["id"]: c["shape"]["kind"] for c in protocol["cases"]}
     families = sorted(set(cases.values()))
     metrics = [m for m in (*PRIMARY_METRICS, *SECONDARY_METRICS) if all(m in row for row in rows)]
@@ -262,6 +299,95 @@ def analyze(protocol: dict, rows: list[dict]) -> dict:
     return report
 
 
+def analyze_reliability(protocol: dict, rows: list[dict], report: dict) -> dict:
+    cases = {c["id"]: c["shape"]["kind"] for c in protocol["cases"]}
+    families = sorted(set(cases.values()))
+
+    def values(selected, key):
+        return {
+            case: np.mean([r[key] for r in selected if r["case"] == case], axis=0)
+            for case in dict.fromkeys(r["case"] for r in selected)
+        }
+
+    def mean(selected, key):
+        by_case = values(selected, key)
+        return np.mean(
+            [
+                np.mean([v for c, v in by_case.items() if cases[c] == family], axis=0)
+                for family in sorted({cases[c] for c in by_case})
+            ],
+            axis=0,
+        )
+
+    def summary(selected, name):
+        stops = sum(r["status"] == "confident" for r in selected)
+        false_stops = sum(r["false_stop"] for r in selected)
+        result = {
+            "variant": name,
+            "completed": len(selected),
+            "stops": stops,
+            "budget_exhausted": len(selected) - stops,
+            "false_stops": false_stops,
+            "false_stop_rate": false_stops / stops if stops else None,
+            "quality_met": sum(r["quality_met"] for r in selected),
+            "optimizer_fallbacks": sum(r["optimizer_fallbacks"] for r in selected),
+        }
+        for key in (
+            "touches",
+            "final_rmse",
+            "final_max_error",
+            "motion_time",
+            "coverage_95",
+            "interval_width",
+            "time_averaged_rmse",
+        ):
+            if all(key in r for r in selected):
+                result[f"mean_{key}"] = float(mean(selected, key))
+        return result
+
+    for variant in VARIANTS:
+        selected = [r for r in rows if r["variant"] == variant]
+        report["variants"].append(summary(selected, variant))
+        for family in families:
+            report["by_family"].append(
+                {
+                    "family": family,
+                    **summary([r for r in selected if r["family"] == family], variant),
+                }
+            )
+        curve = {"variant": variant}
+        for key in ("touch_curve", "time_curve"):
+            if all(key in r for r in selected):
+                curve[key] = mean(selected, key).tolist()
+        report["curves"].append(curve)
+    contrasts = [
+        ("learned-budget", "fixed-budget", "final_rmse"),
+        ("learned-coverage", "learned-budget", "final_rmse"),
+        *(
+            ("guarded-stop", "uncertainty-stop", key)
+            for key in ("false_stop", "quality_met", "touches", "motion_time", "final_rmse")
+        ),
+    ]
+    for variant, reference, metric in contrasts:
+        a = values([r for r in rows if r["variant"] == variant], metric)
+        b = values([r for r in rows if r["variant"] == reference], metric)
+        differences = {
+            family: [float(a[c]) - float(b[c]) for c in cases if cases[c] == family]
+            for family in families
+        }
+        report["paired"].append(
+            {
+                "variant": variant,
+                "reference": reference,
+                "metric": metric,
+                **paired_interval(
+                    differences, protocol["bootstrap_samples"], protocol["bootstrap_seed"]
+                ),
+            }
+        )
+    return report
+
+
 def protocol_hash(protocol):
     return hashlib.sha256(json.dumps(protocol, sort_keys=True).encode()).hexdigest()
 
@@ -274,6 +400,7 @@ def analyze_folder(folder: Path) -> dict:
     report = analyze(protocol, json.loads((folder / "runs.json").read_text()))
     write_json(folder / "analysis.json", report)
     if report["complete"]:
+        reliability = protocol.get("study") == "reliability"
         figure = Figure(figsize=(11, 4), layout="constrained")
         left, right = figure.subplots(1, 2)
         for curve in report["curves"]:
@@ -281,21 +408,29 @@ def analyze_folder(folder: Path) -> dict:
                 np.arange(len(curve["touch_curve"])),
                 curve["touch_curve"],
                 where="post",
-                label=curve["policy"],
+                label=curve["variant" if reliability else "policy"],
             )
             right.step(
                 np.linspace(0, protocol["time_horizon"], len(curve["time_curve"])),
                 curve["time_curve"],
                 where="post",
-                label=curve["policy"],
+                label=curve["variant" if reliability else "policy"],
             )
-        left.set_xlabel("Completed touches")
+        left.set_xlabel(
+            "Available touches (estimate held after stopping)"
+            if reliability
+            else "Completed touches"
+        )
         right.set_xlabel("Modeled motion time (s)")
         for axis in (left, right):
             axis.set_ylabel("Mean radial RMSE / R")
             axis.grid(alpha=0.2)
             axis.legend()
-        figure.suptitle("Held-out fixed-kernel comparison · equal family and noise-level weights")
+        figure.suptitle(
+            "Held-out learning and stopping · different actual budgets"
+            if reliability
+            else "Held-out fixed-kernel comparison · equal family and noise-level weights"
+        )
         figure.savefig(folder / "comparison.png", dpi=150)
         figure.savefig(folder / "comparison.svg")
     return report
@@ -311,6 +446,15 @@ def _execute_job(job):
         final = result.metrics[-1]
         times = np.array([m["motion_time"] for m in result.metrics])
         errors = np.array([m["rmse"] for m in result.metrics])
+        reliability = protocol.get("study") == "reliability"
+        if reliability:
+            row.update(
+                episode_outcome(
+                    result,
+                    rmse_tolerance=protocol["rmse_tolerance"],
+                    max_error_tolerance=protocol["max_error_tolerance"],
+                )
+            )
         indices = (
             np.searchsorted(times, np.linspace(0, protocol["time_horizon"], 201), side="right") - 1
         )
@@ -323,8 +467,12 @@ def _execute_job(job):
             motion_time=final["motion_time"],
             distance=final["distance"],
             time_averaged_rmse=time_average(times, errors, protocol["time_horizon"]),
-            checkpoints={str(n): float(errors[n]) for n in protocol["checkpoints"]},
-            touch_curve=errors.tolist(),
+            checkpoints={
+                str(n): float(errors[min(n, len(errors) - 1)]) for n in protocol["checkpoints"]
+            },
+            touch_curve=np.pad(
+                errors, (0, config.experiment.touches + 1 - len(errors)), mode="edge"
+            ).tolist(),
             time_curve=errors[indices].tolist(),
             repeat_fraction=1
             - len({d.action.candidate_index for d in result.decisions}) / len(result.decisions),
@@ -352,7 +500,9 @@ def run_heldout(protocol: dict, folder: Path, workers: int = 1) -> int:
         folder / "manifest.json",
         {
             **provenance(),
-            "scope": "held-out fixed-kernel benchmark",
+            "scope": "held-out learning and stopping"
+            if protocol.get("study") == "reliability"
+            else "held-out fixed-kernel benchmark",
             "protocol": protocol,
             "protocol_sha256": protocol_hash(protocol),
             "workers": workers,

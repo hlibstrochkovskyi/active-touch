@@ -1,0 +1,260 @@
+{
+  "config": {
+    "experiment": {
+      "policy": "cost",
+      "touches": 128,
+      "initial": 8,
+      "candidates": 256,
+      "integration_points": 256,
+      "evaluation_points": 4096,
+      "noise_std": 0.005,
+      "seed": 7,
+      "noise_seed": null,
+      "safeguard_every": 0
+    },
+    "shape": {
+      "kind": "recess",
+      "base": 0.55,
+      "a": 0.65,
+      "b": 0.4,
+      "depth": 0.18,
+      "width": 0.08,
+      "phase": 0.0
+    },
+    "model": {
+      "mean": 0.525,
+      "signal_std": 0.2,
+      "length_scale": 0.4,
+      "jitter": 1e-10,
+      "learn_hyperparameters": false,
+      "signal_bounds": [
+        0.05,
+        0.4
+      ],
+      "length_bounds": [
+        0.08,
+        1.2
+      ]
+    },
+    "motion": {
+      "outer_radius": 1.0,
+      "min_radius": 0.25,
+      "max_radius": 0.8,
+      "transit_speed": 1.0,
+      "inward_speed": 0.5,
+      "outward_speed": 1.0,
+      "dwell": 0.2
+    },
+    "stopping": {
+      "mode": "budget",
+      "half_width": 0.02,
+      "min_touches": 24,
+      "max_gap_degrees": 15.0,
+      "audit_touches": 2,
+      "innovation_limit": 2.5
+    },
+    "sensor": {
+      "noise_scale": 1.0,
+      "bias": 0.0,
+      "outlier_probability": 0.0,
+      "outlier_std": 0.0
+    }
+  },
+  "cases": [
+    {
+      "id": "circle-validation-0",
+      "shape_seed": 1700000,
+      "episode_seed": 1800000,
+      "shape": {
+        "kind": "circle",
+        "base": 0.5193313509625763,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 0.7372474367464157
+      }
+    },
+    {
+      "id": "circle-validation-1",
+      "shape_seed": 1700001,
+      "episode_seed": 1800001,
+      "shape": {
+        "kind": "circle",
+        "base": 0.4540462612741935,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 4.925971400435029
+      }
+    },
+    {
+      "id": "circle-validation-2",
+      "shape_seed": 1700002,
+      "episode_seed": 1800002,
+      "shape": {
+        "kind": "circle",
+        "base": 0.5076169331802226,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 2.8976616951299654
+      }
+    },
+    {
+      "id": "circle-validation-3",
+      "shape_seed": 1700003,
+      "episode_seed": 1800003,
+      "shape": {
+        "kind": "circle",
+        "base": 0.46373119774595195,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 1.874149870424112
+      }
+    },
+    {
+      "id": "ellipse-validation-0",
+      "shape_seed": 1710000,
+      "episode_seed": 1810000,
+      "shape": {
+        "kind": "ellipse",
+        "base": 0.55,
+        "a": 0.6955498788388796,
+        "b": 0.4668949402578829,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 4.460384413983529
+      }
+    },
+    {
+      "id": "ellipse-validation-1",
+      "shape_seed": 1710001,
+      "episode_seed": 1810001,
+      "shape": {
+        "kind": "ellipse",
+        "base": 0.55,
+        "a": 0.6085317067429658,
+        "b": 0.33705848251325243,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 3.819035542799668
+      }
+    },
+    {
+      "id": "ellipse-validation-2",
+      "shape_seed": 1710002,
+      "episode_seed": 1810002,
+      "shape": {
+        "kind": "ellipse",
+        "base": 0.55,
+        "a": 0.6683135728744231,
+        "b": 0.36722662872419065,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 0.8299542006568824
+      }
+    },
+    {
+      "id": "ellipse-validation-3",
+      "shape_seed": 1710003,
+      "episode_seed": 1810003,
+      "shape": {
+        "kind": "ellipse",
+        "base": 0.55,
+        "a": 0.6794461783044993,
+        "b": 0.38005296699004343,
+        "depth": 0.18,
+        "width": 0.08,
+        "phase": 0.21598946321323184
+      }
+    },
+    {
+      "id": "recess-validation-0",
+      "shape_seed": 1740000,
+      "episode_seed": 1840000,
+      "shape": {
+        "kind": "recess",
+        "base": 0.6108212347322437,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.16844561291453047,
+        "width": 0.08590758871097416,
+        "phase": 1.4997582373182068
+      }
+    },
+    {
+      "id": "recess-validation-1",
+      "shape_seed": 1740001,
+      "episode_seed": 1840001,
+      "shape": {
+        "kind": "recess",
+        "base": 0.64340953329832,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.23680597564392106,
+        "width": 0.0949579456660229,
+        "phase": 5.574047118724538
+      }
+    },
+    {
+      "id": "recess-validation-2",
+      "shape_seed": 1740002,
+      "episode_seed": 1840002,
+      "shape": {
+        "kind": "recess",
+        "base": 0.6273390770510827,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.2222547609654671,
+        "width": 0.049873866694242874,
+        "phase": 2.3735749269822017
+      }
+    },
+    {
+      "id": "recess-validation-3",
+      "shape_seed": 1740003,
+      "episode_seed": 1840003,
+      "shape": {
+        "kind": "recess",
+        "base": 0.5690010153600701,
+        "a": 0.65,
+        "b": 0.4,
+        "depth": 0.11192825147726439,
+        "width": 0.0952914619388979,
+        "phase": 4.085868067913251
+      }
+    }
+  ],
+  "noise_levels": [
+    0.005
+  ],
+  "noise_seeds": [
+    52001,
+    52002
+  ],
+  "checkpoints": [
+    8,
+    16,
+    32,
+    64,
+    128
+  ],
+  "time_horizon": 50.0,
+  "bootstrap_seed": 92001,
+  "bootstrap_samples": 10000,
+  "study": "reliability",
+  "variants": [
+    "fixed-budget",
+    "learned-budget",
+    "learned-coverage",
+    "uncertainty-stop",
+    "guarded-stop"
+  ],
+  "rmse_tolerance": 0.01,
+  "max_error_tolerance": 0.03
+}
