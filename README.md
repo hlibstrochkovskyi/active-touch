@@ -81,8 +81,7 @@ $$
 
 $c$ is the current posterior covariance: how strongly a measurement at one angle informs another. The sum averages the predicted variance reduction over $Q$ integration angles; $j$ is numerical jitter. $\widehat{T}$ estimates the complete action time, including travel, approach, dwell, and retraction. The candidate with the largest reduction per second wins.
 
-<details>
-<summary>Kernel and posterior equations</summary>
+### Kernel and posterior, if you want the detail
 
 Embed angles on a unit circle, then apply a Matérn 3/2 kernel:
 
@@ -108,8 +107,6 @@ $$
 The implementation uses Cholesky solves rather than forming an inverse. The learned variants fit bounded kernel parameters at touch 16 and every eight touches afterward. Failed optimization retains the last valid parameters and refits using all current measurements.
 
 Derivations, assumptions, and source references are in the [project report](docs/project-report.md#2-inference-and-action-selection) and [research notes](RESEARCH_NOTES.md).
-
-</details>
 
 ## What the experiments showed
 
